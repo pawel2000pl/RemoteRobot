@@ -1,0 +1,248 @@
+<html>
+    <head>
+        <style>
+            .slidecontainer {
+            width: 100%; /* Width of the outside container */
+            }
+            .slider {
+            -webkit-appearance: none;  /* Override default CSS styles */
+            appearance: none;
+            width: 100%; /* Full-width */
+            height: 15px; /* Specified height */
+            background: #d3d3d3; /* Grey background */
+            outline: none; /* Remove outline */
+            opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+            -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+            transition: opacity .2s;
+            border-radius: 5px;
+            }
+            .slider:hover {
+            opacity: 1; /* Fully shown on mouse-over */
+            }
+            .slider::-webkit-slider-thumb {
+            -webkit-appearance: none; /* Override default look */
+            appearance: none;
+            width: 25px; /* Set a specific slider handle width */
+            height: 25px; /* Slider handle height */
+            background: #04AA6D; /* Green background */
+            cursor: pointer; /* Cursor on hover */
+            }
+            .slider::-moz-range-thumb {
+            width: 25px; /* Set a specific slider handle width */
+            height: 25px; /* Slider handle height */
+            background: #04AA6D; /* Green background */
+            cursor: pointer; /* Cursor on hover */
+            }
+        </style>
+    </head>
+    <body>
+        <table id="mainBlock" width="100%">
+            <tr>
+                <td width="70%">
+                    <img id="cameraScreen" src="/video_feed" width="100%">
+                </td>
+                <td width="30%">
+                    <div class="controlsContainer">
+                        <p id="voltometer">0 V</p>
+                        <input type="checkbox" id="videoCheckBox">
+                        <label for="videoCheckBox">Enable video</label><br>
+                        <input type="checkbox" id="ledCheckBox">
+                        <label for="ledCheckBox">LED</label><br>
+                        <label for="speedSlider">Speed</label><span id="speedIndicator"></span>
+                        <input type="range" min="0" max="127" value="127" class="slider" id="speedSlider"><br>
+                        <label for="grabSlider">Grab</label><span id="grabIndicator"></span>
+                        <input type="range" min="0" max="127" value="0" class="slider" id="grabSlider"><br>
+                        <label for="cameraXSlider">Camera X</label><span id="cameraXIndicator"></span>
+                        <input type="range" min="-127" max="127" value="0" class="slider" id="cameraXSlider"><br>
+                        <label for="cameraYSlider">Camera Y</label><span id="cameraYIndicator"></span>
+                        <input type="range" min="-127" max="127" value="0" class="slider" id="cameraYSlider"><br>
+                        <label for="maxEngineCorrectionSlider">Max engine correction</label><span id="correctionIndicator"></span>
+                        <input type="range" min="0" max="127" value="127" class="slider" id="maxEngineCorrectionSlider"><br>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </body>
+    <footer>
+        <script>
+            var keyBuf = new Set();
+            const VIDEO_FEED = "/video_feed";
+            const ALTERNATIVE_VIDEO = "https://static01.nyt.com/images/2018/05/15/arts/01hal-voice1/merlin_135847308_098289a6-90ee-461b-88e2-20920469f96a-superJumbo.jpg";
+
+            var speedSlider = document.getElementById("speedSlider");
+            var grabSlider = document.getElementById("grabSlider");
+            var cameraXSlider = document.getElementById("cameraXSlider");
+            var cameraYSlider = document.getElementById("cameraYSlider");
+            var maxEngineCorrectionSlider = document.getElementById("maxEngineCorrectionSlider");
+            var ledCheckBox = document.getElementById("ledCheckBox")
+
+            var speedIndicator = document.getElementById("speedIndicator");
+            var grabIndicator = document.getElementById("grabIndicator");
+            var cameraXIndicator = document.getElementById("cameraXIndicator");
+            var cameraYIndicator = document.getElementById("cameraYIndicator");
+            var correctionIndicator = document.getElementById("correctionIndicator");
+
+            function updateIndicators() {
+                speedIndicator.innerText = " = " + speedSlider.value;
+                grabIndicator.innerText = " = " + grabSlider.value;
+                cameraXIndicator.innerText = " = " + cameraXSlider.value;
+                cameraYIndicator.innerText = " = " + cameraYSlider.value;
+                correctionIndicator.innerText = " = " + maxEngineCorrectionSlider.value;
+            }
+
+            var driving = {
+                    left: 0,
+                    right: 0, 
+                    speed: speedSlider.value, 
+                    grab: grabSlider.value, 
+                    cameraX: cameraXSlider.value, 
+                    cameraY: cameraYSlider.value, 
+                    maxEngineCorrection: maxEngineCorrectionSlider.value, 
+                    led: ledCheckBox.checked?1:0, 
+                    buzzer: 0
+                };
+
+            function setValue(name, value) {
+                driving[name] = value;
+            }
+            
+            speedSlider.oninput = (event) => {setValue("speed", speedSlider.value)};
+            grabSlider.oninput = (event) => {setValue("grab", grabSlider.value)};
+            cameraXSlider.oninput = (event) => {setValue("cameraX", cameraXSlider.value)};
+            cameraYSlider.oninput = (event) => {setValue("cameraY", cameraYSlider.value)};
+            maxEngineCorrectionSlider.oninput = (event) => {setValue("maxEngineCorrection", maxEngineCorrectionSlider.value)};
+            ledCheckBox.onchange = (event) => {setValue("led", ledCheckBox.checked?1:0)};
+
+            function max(a, b) {
+                return (a>b)?a:b;
+            }
+
+            function min(a, b) {
+                return (a>b)?a:b;
+            }
+
+            function ensureRange(v, a, b) {
+                if (v>=a) {
+                    if (v<=b)
+                        return v;
+                    return b;
+                }
+                return a;
+            }
+
+            function abs(x) {
+                return (x>=0)?x:-x;
+            }
+
+            function mapKeys(){
+                var left = 0;
+                var right = 0;
+                if (keyBuf.has("d")) {
+                    left += 1;
+                    right -= 1;
+                }
+                if (keyBuf.has("a")) {
+                    left -= 1;
+                    right += 1;
+                }
+                if (keyBuf.has("e")) 
+                    right += 1;
+                if (keyBuf.has("c"))
+                    right -= 1;
+                if (keyBuf.has("q"))
+                    left += 1;
+                if (keyBuf.has("z"))
+                    left -= 1;
+                if (keyBuf.has("w") || (keyBuf.has("s"))) {
+                    left += 1;
+                    right += 1;
+                }
+                if (keyBuf.has("s")) {
+                    left *= -1;
+                    right *= -1;
+                }
+                if (keyBuf.has(" ")) {
+                    left = 0;
+                    right = 0;
+                    keyBuf.clear();
+                }
+                var divisor = max(abs(left), abs(right));
+                if (divisor > 0) {
+                    left /= divisor;
+                    right /= divisor;
+                }
+                console.log(left, right);
+                return {left, right};
+            }
+
+            async function sendKey(event) { 
+                keyBuf.add(String.fromCharCode(event.keyCode).toLowerCase())
+                var values = mapKeys();
+                setValue("left", values.left);
+                setValue("right", values.right);
+                setValue("buzzer", keyBuf.has("b")?1:0);
+            }
+            
+            async function sendUpKey(event) {
+                keyBuf.delete(String.fromCharCode(event.keyCode).toLowerCase())
+                var values = mapKeys();
+                setValue("left", values.left);
+                setValue("right", values.right);
+                setValue("buzzer", keyBuf.has("b")?1:0);
+            }
+            
+            document.onkeydown = sendKey;
+            document.onkeyup = sendUpKey;
+
+            function ensureSlider(slider, delta) {
+                slider.value = ensureRange(Number(slider.value)+Number(delta), slider.min, slider.max);
+                slider.oninput();
+            }
+
+            function setSliders() {
+                if (keyBuf.has("o"))
+                    ensureSlider(grabSlider, -3);
+                if (keyBuf.has("p"))
+                    ensureSlider(grabSlider, 3);
+                if (keyBuf.has("l"))
+                    ensureSlider(cameraXSlider, 3);
+                if (keyBuf.has("j"))
+                    ensureSlider(cameraXSlider, -3);
+                if (keyBuf.has("k"))
+                    ensureSlider(cameraYSlider, -3);
+                if (keyBuf.has("i"))
+                    ensureSlider(cameraYSlider, 3);
+            }
+
+            voltometer = document.getElementById("voltometer");
+            var lastMessage = "";
+
+            async function sendDriving(sendOnlyOnChange=true) {
+                var currentMessage = JSON.stringify(driving);
+                if (currentMessage == lastMessage && sendOnlyOnChange)
+                    return;
+                response = await fetch('/setValue', {
+                    method: 'POST',
+                    body: currentMessage,
+                    headers: {'Content-Type': 'application/json'}
+                    });
+                lastMessage = currentMessage;
+                var result = await response.json();
+                voltometer.innerText = "Voltage = " + result.voltage.toFixed(2) + " V";
+            }
+
+            setInterval(setSliders, 50);
+            setInterval(() => {sendDriving(true)}, 30);
+            setInterval(() => {sendDriving(false)}, 1000);
+            setInterval(updateIndicators, 50);
+
+            var videoCheckBox = document.getElementById("videoCheckBox");
+            var cameraScreen = document.getElementById("cameraScreen");
+            videoCheckBox.onchange = ()=> {
+                 cameraScreen.src = videoCheckBox.checked?VIDEO_FEED:ALTERNATIVE_VIDEO;
+                };
+            videoCheckBox.onchange();
+
+        </script>
+    </footer>
+</html>
