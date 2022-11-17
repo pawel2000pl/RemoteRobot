@@ -43,6 +43,7 @@
                 </td>
                 <td width="30%">
                     <div class="controlsContainer">
+                        <p id="statusPanel"></p>
                         <p id="voltometer">0 V</p>
                         <input type="checkbox" id="videoCheckBox">
                         <label for="videoCheckBox">Enable video</label><br>
@@ -97,11 +98,16 @@
             var maxEngineCorrectionSlider = document.getElementById("maxEngineCorrectionSlider");
             var ledCheckBox = document.getElementById("ledCheckBox")
 
+            var statusPanel = document.getElementById("statusPanel");
             var speedIndicator = document.getElementById("speedIndicator");
             var grabIndicator = document.getElementById("grabIndicator");
             var cameraXIndicator = document.getElementById("cameraXIndicator");
             var cameraYIndicator = document.getElementById("cameraYIndicator");
             var correctionIndicator = document.getElementById("correctionIndicator");
+
+            function updateStatusPanel(message){
+                statusPanel.innerHTML = "VelocityA: " + message.velocityA.toFixed(2) + " VelocityB: " + message.velocityB.toFixed(2);
+            }
 
             function updateIndicators() {
                 speedIndicator.innerText = " = " + speedSlider.value;
@@ -153,6 +159,8 @@
                 lastMessage = currentMessage;
                 var result = await response.json();
                 updateBaterryIndicator(result.voltage);
+                updateStatusPanel(result);
+                console.log(result);
             }
             
             speedSlider.oninput = (event) => {setValue("speed", speedSlider.value)};
@@ -199,7 +207,6 @@
                     left /= divisor;
                     right /= divisor;
                 }
-                console.log(left, right);
                 return {left, right};
             }
 
