@@ -69,6 +69,27 @@
             const VIDEO_FEED = "/video_feed";
             const ALTERNATIVE_VIDEO = "https://static01.nyt.com/images/2018/05/15/arts/01hal-voice1/merlin_135847308_098289a6-90ee-461b-88e2-20920469f96a-superJumbo.jpg";
 
+            function max(a, b) {
+                return (a>b)?a:b;
+            }
+
+            function min(a, b) {
+                return (a>b)?a:b;
+            }
+
+            function ensureRange(v, a, b) {
+                if (v>=a) {
+                    if (v<=b)
+                        return v;
+                    return b;
+                }
+                return a;
+            }
+
+            function abs(x) {
+                return (x>=0)?x:-x;
+            }
+
             var speedSlider = document.getElementById("speedSlider");
             var grabSlider = document.getElementById("grabSlider");
             var cameraXSlider = document.getElementById("cameraXSlider");
@@ -105,6 +126,34 @@
             function setValue(name, value) {
                 driving[name] = value;
             }
+
+            voltometer = document.getElementById("voltometer");
+            function updateBaterryIndicator(voltage) {
+                var desc = "";
+                if (voltage > 4.0)
+                    desc = "Charging";
+                else if (voltage > 3.0)
+                    desc = (ensureRange((voltage-3.0)/0.71, 0.0, 1.0)*100).toFixed(2) + "%";
+                else 
+                    desc = "EMPTY";
+                voltometer.style.color = (voltage <= 3.0)?'red':((voltage > 4.0)?'green':'black');
+                voltometer.innerText = desc + " ( " + voltage.toFixed(2) + " V )";
+            }
+
+            var lastMessage = "";
+            async function sendDriving(sendOnlyOnChange=true) {
+                var currentMessage = JSON.stringify(driving);
+                if (currentMessage == lastMessage && sendOnlyOnChange)
+                    return;
+                response = await fetch('/setValue', {
+                    method: 'POST',
+                    body: currentMessage,
+                    headers: {'Content-Type': 'application/json'}
+                    });
+                lastMessage = currentMessage;
+                var result = await response.json();
+                updateBaterryIndicator(result.voltage);
+            }
             
             speedSlider.oninput = (event) => {setValue("speed", speedSlider.value)};
             grabSlider.oninput = (event) => {setValue("grab", grabSlider.value)};
@@ -112,27 +161,6 @@
             cameraYSlider.oninput = (event) => {setValue("cameraY", cameraYSlider.value)};
             maxEngineCorrectionSlider.oninput = (event) => {setValue("maxEngineCorrection", maxEngineCorrectionSlider.value)};
             ledCheckBox.onchange = (event) => {setValue("led", ledCheckBox.checked?1:0)};
-
-            function max(a, b) {
-                return (a>b)?a:b;
-            }
-
-            function min(a, b) {
-                return (a>b)?a:b;
-            }
-
-            function ensureRange(v, a, b) {
-                if (v>=a) {
-                    if (v<=b)
-                        return v;
-                    return b;
-                }
-                return a;
-            }
-
-            function abs(x) {
-                return (x>=0)?x:-x;
-            }
 
             function mapKeys(){
                 var left = 0;
@@ -181,6 +209,7 @@
                 setValue("left", values.left);
                 setValue("right", values.right);
                 setValue("buzzer", keyBuf.has("b")?1:0);
+                sendDriving(true);
             }
             
             async function sendUpKey(event) {
@@ -189,6 +218,7 @@
                 setValue("left", values.left);
                 setValue("right", values.right);
                 setValue("buzzer", keyBuf.has("b")?1:0);
+                sendDriving(true);
             }
             
             document.onkeydown = sendKey;
@@ -212,23 +242,6 @@
                     ensureSlider(cameraYSlider, -3);
                 if (keyBuf.has("i"))
                     ensureSlider(cameraYSlider, 3);
-            }
-
-            voltometer = document.getElementById("voltometer");
-            var lastMessage = "";
-
-            async function sendDriving(sendOnlyOnChange=true) {
-                var currentMessage = JSON.stringify(driving);
-                if (currentMessage == lastMessage && sendOnlyOnChange)
-                    return;
-                response = await fetch('/setValue', {
-                    method: 'POST',
-                    body: currentMessage,
-                    headers: {'Content-Type': 'application/json'}
-                    });
-                lastMessage = currentMessage;
-                var result = await response.json();
-                voltometer.innerText = "Voltage = " + result.voltage.toFixed(2) + " V";
             }
 
             setInterval(setSliders, 50);
