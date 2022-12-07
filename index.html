@@ -47,6 +47,8 @@
                         <p id="voltometer">0 V</p>
                         <input type="checkbox" id="videoCheckBox">
                         <label for="videoCheckBox">Enable video</label><br>
+                        <input type="checkbox" id="qrtargetCheckBox">
+                        <label for="qrtargetCheckBox">QR targetting</label><br>
                         <input type="checkbox" id="ledCheckBox">
                         <label for="ledCheckBox">LED</label><br>
                         <label for="speedSlider">Speed</label><span id="speedIndicator"></span>
@@ -97,6 +99,7 @@
             var cameraYSlider = document.getElementById("cameraYSlider");
             var maxEngineCorrectionSlider = document.getElementById("maxEngineCorrectionSlider");
             var ledCheckBox = document.getElementById("ledCheckBox")
+            var qrtargetCheckBox = document.getElementById("qrtargetCheckBox");
 
             var statusPanel = document.getElementById("statusPanel");
             var speedIndicator = document.getElementById("speedIndicator");
@@ -126,6 +129,7 @@
                     cameraY: cameraYSlider.value, 
                     maxEngineCorrection: maxEngineCorrectionSlider.value, 
                     led: ledCheckBox.checked?1:0, 
+                    qr: qrtargetCheckBox.checked?1:0,
                     buzzer: 0
                 };
 
@@ -169,6 +173,7 @@
             cameraYSlider.oninput = (event) => {setValue("cameraY", cameraYSlider.value)};
             maxEngineCorrectionSlider.oninput = (event) => {setValue("maxEngineCorrection", maxEngineCorrectionSlider.value)};
             ledCheckBox.onchange = (event) => {setValue("led", ledCheckBox.checked?1:0)};
+            qrtargetCheckBox.onchange = (event) => {setValue("qr", qrtargetCheckBox.checked?1:0)};
 
             function mapKeys(){
                 var left = 0;
