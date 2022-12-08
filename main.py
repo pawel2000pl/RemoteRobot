@@ -149,7 +149,7 @@ class RobotServer:
   
         self.driving["cameraY"] = str(int(float(self.driving["cameraY"]))-50*(center[1]-0.5))
         
-        targetCenter = 0.5 - self.driving["cameraX"]/127
+        targetCenter = 0.5 - float(self.driving["cameraX"])/127
         leftPower = min(1, max(0, 0.5+2*(center[0] - targetCenter)))
         rightPower = min(1, max(0, 0.5+2*(targetCenter - center[0])))
         m = leftPower + rightPower
@@ -241,7 +241,7 @@ class RobotServer:
                 print("Error during recieving data from arduino:", err)
                 print(line)
             
-            sleep(0.03)
+            sleep(0.015)
 
     def index(self):
         with open('index.html') as f:
