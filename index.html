@@ -70,7 +70,7 @@
         <script>
             var keyBuf = new Set();
             const VIDEO_FEED = "/video_feed";
-            const ALTERNATIVE_VIDEO = "https://static01.nyt.com/images/2018/05/15/arts/01hal-voice1/merlin_135847308_098289a6-90ee-461b-88e2-20920469f96a-superJumbo.jpg";
+            const ALTERNATIVE_VIDEO = "https://live.staticflickr.com/1321/1426287043_3c650829e7_b.jpg";
 
             function max(a, b) {
                 return (a>b)?a:b;
@@ -216,7 +216,8 @@
             }
 
             async function sendKey(event) { 
-                keyBuf.add(String.fromCharCode(event.keyCode).toLowerCase())
+                console.log(event);
+                keyBuf.add(event.key.toLowerCase())
                 var values = mapKeys();
                 setValue("left", values.left);
                 setValue("right", values.right);
@@ -225,7 +226,7 @@
             }
             
             async function sendUpKey(event) {
-                keyBuf.delete(String.fromCharCode(event.keyCode).toLowerCase())
+                keyBuf.delete(event.key.toLowerCase())
                 var values = mapKeys();
                 setValue("left", values.left);
                 setValue("right", values.right);

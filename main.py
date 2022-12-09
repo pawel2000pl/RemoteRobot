@@ -8,7 +8,7 @@ from os import system
 from flask import Flask, Response, request
 from serial import Serial
 from time import sleep, time
-from math import sqrt
+from math import sqrt, exp
 from collections import defaultdict
 from random import random
 
@@ -22,6 +22,8 @@ ID_BEEP_OFF = 7
 ID_LED_ON = 8
 ID_LED_OFF = 9
 ID_MAX_ENGINE_CORRECTION = 10
+
+HELLO_VALUE = 85
 
 VALUES = ["left", "right", "speed", "grab", "cameraX", "cameraY", "maxEngineCorrection", "led", "qr", "buzzer"]
 
@@ -149,7 +151,7 @@ class RobotServer:
   
         self.driving["cameraY"] = str(int(float(self.driving["cameraY"]))-50*(center[1]-0.5))
         
-        targetCenter = 0.5 - float(self.driving["cameraX"])/127
+        targetCenter = 0.5 - float(self.driving["cameraX"])/64
         leftPower = min(1, max(0, 0.5+2*(center[0] - targetCenter)))
         rightPower = min(1, max(0, 0.5+2*(targetCenter - center[0])))
         m = leftPower + rightPower
@@ -159,7 +161,8 @@ class RobotServer:
         self.driving["left"] = "%2f"%leftPower
         self.driving["right"] = "%2f"%rightPower
         print(self.driving["left"], self.driving["right"])
-        sleep(0.15)
+        sleep(0.15*1.3/(0.3+area/DESTINATION_AREA)/exp(abs(leftPower-rightPower)))
+        # sleep(0.15)
         self.driving["left"] = "0"
         self.driving["right"] = "0"
         sleep(0.5)
@@ -182,7 +185,7 @@ class RobotServer:
         finally:        
             camera.release()
 
-    def sendMessage(self, id, value=0):
+    def sendMessage(self, id, value=0, force=False):
         try:
             if self.lastSentMessage["LastTime"] is None:
                 self.lastSentMessage["LastTime"] = time()
@@ -192,12 +195,20 @@ class RobotServer:
             value = int(float(value))
             if value < 0:
                 value += 256
-            if self.lastSentMessage[id] == value and time()-self.lastSentMessage["LastTime"] < 0.5:
+            if (not force) and self.lastSentMessage[id] == value and time()-self.lastSentMessage["LastTime"] < 0.1:
                 return False
             self.lastSentMessage["LastTime"] = time()
             self.lastSentMessage[id] = value
-            buf = id.to_bytes(1, 'little') + value.to_bytes(1, 'little')
-            self.serial.write(buf)
+            buf = HELLO_VALUE.to_bytes(1, 'little') + \
+                 id.to_bytes(1, 'little') + \
+                 value.to_bytes(1, 'little') + \
+                 ((id + 1) * (value + 1) & 255).to_bytes(1, 'little')
+            for i in range(16):
+                try:
+                    self.serial.write(buf)
+                    break
+                except:
+                    sleep(0.01)
             sleep(0.001)
             return True
         except Exception as err:
@@ -215,22 +226,24 @@ class RobotServer:
                 sleep(1)
                 continue
             
+            force = random()<0.05
+
             if self.driving["led"]:
-                self.sendMessage(ID_LED_ON)
+                self.sendMessage(ID_LED_ON, force=force)
             else:
-                self.sendMessage(ID_LED_OFF)
+                self.sendMessage(ID_LED_OFF, force=force)
 
             if self.driving["buzzer"]:
-                self.sendMessage(ID_BEEP_ON)
+                self.sendMessage(ID_BEEP_ON, force=force)
             else:
-                self.sendMessage(ID_BEEP_OFF)
+                self.sendMessage(ID_BEEP_OFF, force=force)
 
-            self.sendMessage(ID_LEFT_ENGINE, float(self.driving["speed"])*float(self.driving["left"]))
-            self.sendMessage(ID_RIGHT_ENGINE, float(self.driving["speed"])*float(self.driving["right"]))
-            self.sendMessage(ID_CAMERA_X, self.driving["cameraX"])
-            self.sendMessage(ID_CAMERA_Y, self.driving["cameraY"])
-            self.sendMessage(ID_GRAB, self.driving["grab"])
-            self.sendMessage(ID_MAX_ENGINE_CORRECTION, self.driving["maxEngineCorrection"])
+            self.sendMessage(ID_LEFT_ENGINE, float(self.driving["speed"])*float(self.driving["left"]), force=force)
+            self.sendMessage(ID_RIGHT_ENGINE, float(self.driving["speed"])*float(self.driving["right"]), force=force)
+            self.sendMessage(ID_CAMERA_X, self.driving["cameraX"], force=force)
+            self.sendMessage(ID_CAMERA_Y, self.driving["cameraY"], force=force)
+            self.sendMessage(ID_GRAB, self.driving["grab"], force=force)
+            self.sendMessage(ID_MAX_ENGINE_CORRECTION, self.driving["maxEngineCorrection"], force=force)
 
             try:
                 while self.serial.in_waiting > 64:
